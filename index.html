@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Text Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #4a6baf;
+            --secondary-color: #f0f0f0;
+            --border-color: #ddd;
+            --hover-color: #3a5a9f;
+            --card-bg: #fff;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #5d7bc4;
+            --secondary-color: #2d2d2d;
+            --border-color: #444;
+            --hover-color: #6d8bd4;
+            --card-bg: #2a2a2a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .file-input-label:hover {
+            background-color: var(--hover-color);
+        }
+
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--hover-color);
+        }
+
+        button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        .secondary-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .dark-mode .secondary-btn:hover {
+            background-color: #3a3a3a;
+        }
+
+        .result-section {
+            display: none;
+        }
+
+        .text-output {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            resize: vertical;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-style: italic;
+            color: var(--text-color);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background-color: var(--secondary-color);
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--secondary-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-toggle:hover {
+            background-color: #e0e0e0;
+        }
+
+        .dark-mode .theme-toggle:hover {
+            background-color: #3a3a3a;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF to Text Converter</h1>
+        
+        <button class="theme-toggle" id="themeToggle">🌓</button>
+        
+        <div class="card upload-section">
+            <div class="file-input-wrapper">
+                <label for="pdfInput" class="file-input-label">Choose PDF File</label>
+                <input type="file" id="pdfInput" class="file-input" accept=".pdf">
+            </div>
+            <div id="fileName" class="file-name">No file selected</div>
+            
+            <div class="progress-bar" id="progressBar">
+                <div class="progress" id="progress"></div>
+            </div>
+            
+            <div class="button-group">
+                <button id="extractBtn" disabled>Extract Text</button>
+                <button id="clearBtn" class="secondary-btn" disabled>Clear Text</button>
+                <button id="downloadBtn" class="secondary-btn" disabled>Download as TXT</button>
+            </div>
+            
+            <div id="status" class="status"></div>
+        </div>
+        
+        <div class="card result-section" id="resultSection">
+            <h2>Extracted Text</h2>
+            <textarea id="textOutput" class="text-output" placeholder="Extracted text will appear here..." readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Initialize PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+
+        // DOM elements
+        const pdfInput = document.getElementById('pdfInput');
+        const extractBtn = document.getElementById('extractBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const textOutput = document.getElementById('textOutput');
+        const fileName = document.getElementById('fileName');
+        const status = document.getElementById('status');
+        const resultSection = document.getElementById('resultSection');
+        const progressBar = document.getElementById('progressBar');
+        const progress = document.getElementById('progress');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+        });
+
+        // Check for saved theme preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // File input change handler
+        pdfInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                fileName.textContent = file.name;
+                extractBtn.disabled = false;
+                status.textContent = 'Ready to extract text';
+            } else {
+                fileName.textContent = 'No file selected';
+                extractBtn.disabled = true;
+                status.textContent = '';
+            }
+            
+            // Reset other buttons
+            clearBtn.disabled = true;
+            downloadBtn.disabled = true;
+            textOutput.value = '';
+            resultSection.style.display = 'none';
+        });
+
+        // Extract text button handler
+        extractBtn.addEventListener('click', async () => {
+            if (pdfInput.files.length === 0) return;
+            
+            const file = pdfInput.files[0];
+            const fileReader = new FileReader();
+            
+            fileReader.onload = async function() {
+                try {
+                    status.textContent = 'Processing PDF...';
+                    progressBar.style.display = 'block';
+                    extractBtn.disabled = true;
+                    
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    
+                    let fullText = '';
+                    const totalPages = pdf.numPages;
+                    
+                    for (let i = 1; i <= totalPages; i++) {
+                        progress.style.width = `${(i / totalPages) * 100}%`;
+                        status.textContent = `Processing page ${i} of ${totalPages}...`;
+                        
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n\n';
+                        
+                        // Small delay to prevent UI freezing
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    
+                    textOutput.value = fullText;
+                    resultSection.style.display = 'block';
+                    clearBtn.disabled = false;
+                    downloadBtn.disabled = false;
+                    status.textContent = `Text extracted successfully from ${totalPages} page(s).`;
+                    progressBar.style.display = 'none';
+                    progress.style.width = '0%';
+                    extractBtn.disabled = false;
+                } catch (error) {
+                    console.error('Error extracting text:', error);
+                    status.textContent = 'Error extracting text: ' + error.message;
+                    progressBar.style.display = 'none';
+                    extractBtn.disabled = false;
+                }
+            };
+            
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        // Clear text button handler
+        clearBtn.addEventListener('click', () => {
+            textOutput.value = '';
+            status.textContent = 'Text cleared';
+            downloadBtn.disabled = true;
+            clearBtn.disabled = true;
+        });
+
+        // Download button handler
+        downloadBtn.addEventListener('click', () => {
+            const text = textOutput.value;
+            if (!text.trim()) return;
+            
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = pdfInput.files[0].name.replace('.pdf', '') + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            status.textContent = 'Text downloaded successfully';
+        });
+
+        // Make text editable/non-editable
+        textOutput.addEventListener('dblclick', () => {
+            textOutput.readOnly = !textOutput.readOnly;
+            status.textContent = textOutput.readOnly ? 'Text locked (double-click to edit)' : 'Text editable (double-click to lock)';
+        });
+    </script>
+</body>
+</html>
